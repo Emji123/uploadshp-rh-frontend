@@ -24,7 +24,7 @@ const ShapefileRHLVegetatifForm = () => {
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
-    console.log('File dipilih (RHL Vegetatif):', selectedFile ? selectedFile.name : 'Tidak ada file');
+    console.log('File dipilih (RHL Reguler):', selectedFile ? selectedFile.name : 'Tidak ada file');
     setFile(selectedFile);
     setError('');
     setSuccess('');
@@ -32,7 +32,7 @@ const ShapefileRHLVegetatifForm = () => {
 
   const validateZip = async (zipFile) => {
     try {
-      console.log('Validasi ZIP (RHL Vegetatif):', zipFile.name);
+      console.log('Validasi ZIP (RHL Reguler):', zipFile.name);
       const zip = new JSZip();
       const content = await zip.loadAsync(zipFile);
       const files = Object.keys(content.files);
@@ -65,6 +65,7 @@ const ShapefileRHLVegetatifForm = () => {
 
         // Cek proyeksi WGS84
         const prjContent = await content.file(prjFile).async('string');
+        console.log('Isi .prj:', prjContent);
         const wgs84Pattern = /GEOGCS\["GCS_WGS_1984"/i;
         if (!wgs84Pattern.test(prjContent)) {
           errorMessages.push(`- Shapefile ${baseName} tidak menggunakan proyeksi WGS84.`);
@@ -138,7 +139,7 @@ const ShapefileRHLVegetatifForm = () => {
 
       return { valid: true };
     } catch (err) {
-      console.error('Error validasi ZIP (RHL Vegetatif):', err);
+      console.error('Error validasi ZIP (RHL Reguler):', err);
       return { valid: false, error: `Gagal memvalidasi ZIP: ${err.message}` };
     }
   };
@@ -170,12 +171,12 @@ const ShapefileRHLVegetatifForm = () => {
       const fileNameWithDate = `${dateString}_${timeString}_${file.name}`;
       filePath = `shapefiles/${fileNameWithDate}`;
 
-      const { data: uploadData, error: fileError } = await supabase.storage
+      const { error: fileError } = await supabase.storage
         .from('rhlvegetatif')
         .upload(filePath, file, { upsert: true });
 
       if (fileError) {
-        console.error('Upload error (RHL Vegetatif):', fileError);
+        console.error('Upload error (RHL Reguler):', fileError);
         setError('Gagal mengunggah: ' + fileError.message);
         setIsUploading(false);
         return;
@@ -200,7 +201,7 @@ const ShapefileRHLVegetatifForm = () => {
       setFile(null);
       document.getElementById('shapefileInput').value = '';
     } catch (err) {
-      console.error('Error umum (RHL Vegetatif):', err);
+      console.error('Error umum (RHL Reguler):', err);
       setError('Terjadi kesalahan: ' + err.message);
       if (filePath) {
         await supabase.storage.from('rhlvegetatif').remove([filePath]);

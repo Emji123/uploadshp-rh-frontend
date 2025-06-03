@@ -64,6 +64,7 @@ const ShapefileUPSAForm = () => {
 
         // Cek proyeksi WGS84
         const prjContent = await content.file(prjFile).async('string');
+        console.log('Isi .prj:', prjContent);
         const wgs84Pattern = /GEOGCS\["GCS_WGS_1984"/i;
         if (!wgs84Pattern.test(prjContent)) {
           errorMessages.push(`- Shapefile ${baseName} tidak menggunakan proyeksi WGS84.`);
@@ -169,7 +170,7 @@ const ShapefileUPSAForm = () => {
       const fileNameWithDate = `${dateString}_${timeString}_${file.name}`;
       filePath = `shapefiles/${fileNameWithDate}`;
 
-      const { data: uploadData, error: fileError } = await supabase.storage
+      const { error: fileError } = await supabase.storage
         .from('rhlupsa')
         .upload(filePath, file, { upsert: true });
 
@@ -189,7 +190,7 @@ const ShapefileUPSAForm = () => {
 
       const result = await response.json();
       if (!response.ok) {
-        setError(result.error || 'Gagal memvalidasi shapefile.');
+        setError(result.error || 'Gagal memvalidasi shapefile.'));
         await supabase.storage.from('rhlupsa').remove([filePath]);
         setIsUploading(false);
         return;

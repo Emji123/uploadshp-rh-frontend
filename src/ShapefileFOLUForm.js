@@ -65,6 +65,7 @@ const ShapefileFOLUForm = () => {
 
         // Cek proyeksi WGS84
         const prjContent = await content.file(prjFile).async('string');
+        console.log('Isi .prj:', prjContent);
         const wgs84Pattern = /GEOGCS\["GCS_WGS_1984"/i;
         if (!wgs84Pattern.test(prjContent)) {
           errorMessages.push(`- Shapefile ${baseName} tidak menggunakan proyeksi WGS84.`);
@@ -170,7 +171,7 @@ const ShapefileFOLUForm = () => {
       const fileNameWithDate = `${dateString}_${timeString}_${file.name}`;
       filePath = `shapefiles/${fileNameWithDate}`;
 
-      const { data: uploadData, error: fileError } = await supabase.storage
+      const { error: fileError } = await supabase.storage
         .from('rhlfolu')
         .upload(filePath, file, { upsert: true });
 
