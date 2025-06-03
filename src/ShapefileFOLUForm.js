@@ -43,98 +43,91 @@ const ShapefileFOLUForm = () => {
         return { valid: false, error: 'File ZIP harus berisi setidaknya satu file .shp.' };
       }
 
-      const errorMessages = [];
+      const shapefileErrors = [];
+      let index = 1;
 
       for (const shpFile of shpFiles) {
         const baseName = shpFile.substring(0, shpFile.length - 4).toLowerCase();
         console.log('Memvalidasi shapefile:', baseName);
+        const errorMessages = [];
 
         const shxFile = files.find(name => name.toLowerCase() === `${baseName}.shx`);
         const dbfFile = files.find(name => name.toLowerCase() === `${baseName}.dbf`);
-        const prjFile = files.find(name => name.toLowerCase() === `${baseName}.prj`);
 
         if (!shxFile || !dbfFile) {
-          errorMessages.push(`- Shapefile ${baseName} tidak lengkap: harus memiliki .shp, .shx, dan .dbf.`);
-          continue;
-        }
+          errorMessages.push(`Shapefile ${baseName} tidak lengkap: harus memiliki .shp, .shx, dan .dbf.`);
+        } else {
+          const dbfContent = await content.file(dbfFile).async('arraybuffer');
+          const source = await openDbf(dbfContent);
+          console.log('Membuka .dbf:', dbfFile);
 
-        if (!prjFile) {
-          errorMessages.push(`- Shapefile ${baseName} tidak memiliki file .prj.`);
-          continue;
-        }
+          let missingFields = new Set();
+          let emptyFields = [];
+          let featureCount = 0;
 
-        // Cek proyeksi WGS84
-        const prjContent = await content.file(prjFile).async('string');
-        console.log('Isi .prj:', prjContent);
-        const wgs84Pattern = /GEOGCS\["GCS_WGS_1984"/i;
-        if (!wgs84Pattern.test(prjContent)) {
-          errorMessages.push(`- Shapefile ${baseName} tidak menggunakan proyeksi WGS84.`);
-          continue;
-        }
+          let result;
+          do {
+            result = await source.read();
+            console.log('Fitur:', result);
+            if (result.done) break;
 
-        const dbfContent = await content.file(dbfFile).async('arraybuffer');
-        const source = await openDbf(dbfContent);
-        console.log('Membuka .dbf:', dbfFile);
-
-        let missingFields = new Set();
-        let emptyFields = [];
-        let featureCount = 0;
-
-        let result;
-        do {
-          result = await source.read();
-          console.log('Fitur:', result);
-          if (result.done) break;
-
-          featureCount++;
-          const feature = result.value;
-          if (!feature) {
-            errorMessages.push(`- Baris ke-${featureCount} dalam ${dbfFile} tidak valid.`);
-            break;
-          }
-
-          const properties = feature.properties || feature;
-          if (!properties || typeof properties !== 'object') {
-            errorMessages.push(`- Baris ke-${featureCount} dalam ${dbfFile} tidak memiliki properti valid.`);
-            break;
-          }
-          console.log('Properti fitur:', properties);
-
-          requiredFields.forEach(field => {
-            if (!(field in properties)) {
-              missingFields.add(field);
+            featureCount++;
+            const feature = result.value;
+            if (!feature) {
+              errorMessages.push(`Baris ke-${featureCount} dalam ${dbfFile} tidak valid.`);
+              break;
             }
-          });
 
-          let emptyInFeature = [];
-          requiredFields.forEach(field => {
-            if (field in properties) {
-              const value = properties[field];
-              if (value === null || value === '') {
-                emptyInFeature.push(field);
+            const properties = feature.properties || feature;
+            if (!properties || typeof properties !== 'object') {
+              errorMessages.push(`Baris ke-${featureCount} dalam ${dbfFile} tidak memiliki properti valid.`);
+              break;
+            }
+            console.log('Properti fitur:', properties);
+
+            requiredFields.forEach(field => {
+              if (!(field in properties)) {
+                missingFields.add(field);
               }
+            });
+
+            let emptyInFeature = [];
+            requiredFields.forEach(field => {
+              if (field in properties) {
+                const value = properties[field];
+                if (value === null || value === '') {
+                  emptyInFeature.push(field);
+                }
+              }
+            });
+            if (emptyInFeature.length > 0) {
+              emptyFields.push(`Baris ke-${featureCount} pada field: ${emptyInFeature.join(', ')}`);
             }
-          });
-          if (emptyInFeature.length > 0) {
-            emptyFields.push(`Baris ke-${featureCount} pada field: ${emptyInFeature.join(', ')}`);
+          } while (!result.done);
+
+          if (featureCount === 0) {
+            errorMessages.push(`File ${dbfFile} tidak ada data.`);
           }
-        } while (!result.done);
 
-        if (featureCount === 0) {
-          errorMessages.push(`- File ${dbfFile} tidak ada data.`);
-          continue;
+          if (missingFields.size > 0) {
+            errorMessages.push(`Field yang belum ditambahkan yaitu: ${Array.from(missingFields).join(', ')}.`);
+          }
+          if (emptyFields.length > 0) {
+            errorMessages.push(`Data belum diisi/kosong pada ${emptyFields.join('; ')}`);
+          }
         }
 
-        if (missingFields.size > 0) {
-          errorMessages.push(`- Field belum ditambahkan dalam ${dbfFile}: ${Array.from(missingFields).join(', ')}.`);
+        if (errorMessages.length > 0) {
+          shapefileErrors.push(`${index}. Pada shapefile ${baseName} terdapat eror:\n   - ${errorMessages.join('\n   - ')}`);
+        } else {
+          shapefileErrors.push(`${index}. shapefile ${baseName} telah sesuai`);
         }
-        if (emptyFields.length > 0) {
-          errorMessages.push(`- Field belum di-upload dalam daftar data di ${dbfFile}: ${emptyFields.join('; ')}`);
-        }
+        index++;
       }
 
-      if (errorMessages.length > 0) {
-        return { valid: false, error: errorMessages.join('\n') };
+      if (shapefileErrors.some(error => error.includes('terdapat eror'))) {
+        shapefileErrors.push('silakan Upload ulang');
+        return { valid: false, error: shapefileErrors.join('\n') };
       }
 
       return { valid: true };
