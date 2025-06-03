@@ -190,7 +190,7 @@ const ShapefileUPSAForm = () => {
 
       const result = await response.json();
       if (!response.ok) {
-        setError(result.error || 'Gagal memvalidasi shapefile.'));
+        setError(result.error || 'Gagal memvalidasi shapefile.');
         await supabase.storage.from('rhlupsa').remove([filePath]);
         setIsUploading(false);
         return;
