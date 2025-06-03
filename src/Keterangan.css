@@ -1,0 +1,28 @@
+.keterangan-container {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  text-align: left; /* Pastikan teks rata kiri */
+}
+
+.keterangan-container h3 {
+  color: #2c3e50;
+  text-align: left; /* Pastikan header rata kiri */
+}
+
+.keterangan-container ol {
+  padding-left: 20px;
+  text-align: left; /* Pastikan daftar rata kiri */
+}
+
+.keterangan-container ul {
+  margin-left: 20px;
+  list-style-type: disc;
+  text-align: left; /* Pastikan sub-daftar rata kiri */
+}
+
+.keterangan-container li {
+  margin-bottom: 10px;
+}

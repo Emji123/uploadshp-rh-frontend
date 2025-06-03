@@ -1,0 +1,76 @@
+.form-container {
+  margin: 20px auto;
+  max-width: 600px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  text-align: left; /* Pastikan kontainer form rata kiri */
+}
+
+.error {
+  color: red;
+  text-align: left; /* Pastikan pesan error rata kiri */
+  white-space: pre-wrap; /* Pertahankan format baris baru */
+}
+
+.success {
+  color: green;
+  text-align: left; /* Pastikan pesan sukses rata kiri */
+}
+
+.uploading {
+  color: blue;
+  text-align: left; /* Pastikan pesan uploading rata kiri */
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.file-input-label {
+  font-weight: bold;
+}
+
+.file-input {
+  padding: 5px;
+}
+
+.file-name-box {
+  border: 1px solid #ccc;
+  padding: 5px;
+  min-height: 20px;
+}
+
+.btn-blue {
+  background-color: #007bff;
+  color: white;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.btn-pink {
+  background-color: #ff69b4;
+  color: white;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.btn-orange {
+  background-color: #ffa500;
+  color: white;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
