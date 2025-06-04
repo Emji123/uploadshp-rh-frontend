@@ -126,7 +126,7 @@ const ShapefileRHLVegetatifForm = () => {
       }
 
       if (shapefileErrors.some(error => error.includes('terdapat eror'))) {
-        shapefileErrors.push('silakan Upload ulang');
+        shapefileErrors.push('silakan perbaiki dan Upload ulang');
         return { valid: false, error: shapefileErrors.join('\n') };
       }
 
