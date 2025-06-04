@@ -99,20 +99,25 @@ const ShapefileFOLUForm = () => {
                 if (value === null || value === '') {
                   emptyInFeature.push(field);
                 }
-                // Validasi khusus untuk LUAS_HA
-                if (field === 'LUAS_HA' && value !== null && value !== '') {
-                  const numericValue = parseFloat(value);
-                  if (isNaN(numericValue)) {
-                    invalidLuasHA.push(`Baris ke-${featureCount} pada field LUAS_HA: nilai harus numerik.`);
-                  } else {
-                    const decimalPart = numericValue % 1;
-                    if (decimalPart >= 0.5) {
-                      invalidLuasHA.push(`Baris ke-${featureCount} pada field LUAS_HA: angka desimalnya lebih dari atau sama dengan 0.5.`);
-                    }
+              }
+            });
+
+            // Validasi khusus untuk LUAS_HA
+            if ('LUAS_HA' in properties) {
+              const value = properties.LUAS_HA;
+              if (value !== null && value !== '') {
+                const numericValue = parseFloat(value);
+                if (isNaN(numericValue)) {
+                  invalidLuasHA.push(`Baris ke-${featureCount} pada field LUAS_HA: nilai harus numerik.`);
+                } else {
+                  const decimalPart = numericValue % 1;
+                  if (decimalPart > 0.5) {
+                    invalidLuasHA.push(`Baris ke-${featureCount} pada field LUAS_HA: angka desimalnya lebih dari 0.5.`);
                   }
                 }
               }
-            });
+            }
+
             if (emptyInFeature.length > 0) {
               emptyFields.push(`Baris ke-${featureCount} pada field: ${emptyInFeature.join(', ')}`);
             }
