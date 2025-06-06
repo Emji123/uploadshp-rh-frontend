@@ -43,118 +43,132 @@ const ShapefileFOLUForm = () => {
         return { valid: false, error: 'File ZIP harus berisi setidaknya satu file .shp.' };
       }
 
-      const shapefileErrors = [];
-      let index = 1;
+      const successMessages = [];
+      const errorMessages = [];
+      let shapefileIndex = 0;
+      let validShapefileCount = 0;
 
       for (const shpFile of shpFiles) {
+        shapefileIndex++;
         const baseName = shpFile.substring(0, shpFile.length - 4).toLowerCase();
         console.log('Memvalidasi shapefile:', baseName);
-        const errorMessages = [];
 
         const shxFile = files.find(name => name.toLowerCase() === `${baseName}.shx`);
         const dbfFile = files.find(name => name.toLowerCase() === `${baseName}.dbf`);
 
         if (!shxFile || !dbfFile) {
-          errorMessages.push(`Shapefile ${baseName} tidak lengkap: harus memiliki .shp, .shx, dan .dbf.`);
-        } else {
-          const dbfContent = await content.file(dbfFile).async('arraybuffer');
-          const source = await openDbf(dbfContent);
-          console.log('Membuka .dbf:', dbfFile);
+          errorMessages.push(`${shapefileIndex}. Shapefile ${baseName} belum lengkap:\n    - Harus memiliki .shp, .shx, dan .dbf`);
+          continue;
+        }
 
-          let missingFields = new Set();
-          let emptyFields = [];
-          let invalidLuasHA = [];
-          let featureCount = 0;
+        const dbfContent = await content.file(dbfFile).async('arraybuffer');
+        const source = await openDbf(dbfContent);
+        console.log('Membuka .dbf:', dbfFile);
 
-          let result;
-          do {
-            result = await source.read();
-            console.log('Fitur:', result);
-            if (result.done) break;
+        let missingFields = new Set();
+        let emptyFieldsMap = new Map();
+        let invalidLuasHA = [];
+        let featureCount = 0;
 
-            featureCount++;
-            const feature = result.value;
-            if (!feature) {
-              errorMessages.push(`Baris ke-${featureCount} dalam ${dbfFile} tidak valid.`);
-              break;
-            }
+        let result;
+        do {
+          result = await source.read();
+          console.log('Fitur:', result);
+          if (result.done) break;
 
-            const properties = feature.properties || feature;
-            if (!properties || typeof properties !== 'object') {
-              errorMessages.push(`Baris ke-${featureCount} dalam ${dbfFile} tidak memiliki properti valid.`);
-              break;
-            }
-            console.log('Properti fitur:', properties);
-
-            requiredFields.forEach(field => {
-              if (!(field in properties)) {
-                missingFields.add(field);
-              }
-            });
-
-            let emptyInFeature = [];
-            requiredFields.forEach(field => {
-              if (field in properties) {
-                const value = properties[field];
-                if (value === null || value === '') {
-                  emptyInFeature.push(field);
-                }
-              }
-            });
-
-            // Validasi khusus untuk LUAS_HA
-            if ('LUAS_HA' in properties) {
-              const value = properties.LUAS_HA;
-              if (value !== null && value !== '') {
-                const numericValue = parseFloat(value);
-                if (isNaN(numericValue)) {
-                  invalidLuasHA.push(`Baris ke-${featureCount} pada field LUAS_HA: nilai harus numerik.`);
-                } else {
-                  const decimalPart = numericValue % 1;
-                  if (decimalPart > 0.5) {
-                    invalidLuasHA.push(`Baris ke-${featureCount} pada field LUAS_HA: angka desimalnya lebih dari 0.5.`);
-                  }
-                }
-              }
-            }
-
-            if (emptyInFeature.length > 0) {
-              emptyFields.push(`Baris ke-${featureCount} pada field: ${emptyInFeature.join(', ')}`);
-            }
-          } while (!result.done);
-
-          if (featureCount === 0) {
-            errorMessages.push(`File ${dbfFile} tidak ada data.`);
+          featureCount++;
+          const feature = result.value;
+          if (!feature) {
+            errorMessages.push(`${shapefileIndex}. Shapefile ${baseName} tidak valid:\n    - Baris ke-${featureCount} tidak valid`);
+            break;
           }
 
+          const properties = feature.properties || feature;
+          if (!properties || typeof properties !== 'object') {
+            errorMessages.push(`${shapefileIndex}. Shapefile ${baseName} tidak valid:\n    - Baris ke-${featureCount} tidak memiliki properti valid`);
+            break;
+          }
+          console.log('Properti fitur:', properties);
+
+          for (const field of requiredFields) {
+            if (!(field in properties)) {
+              missingFields.add(field);
+            } else {
+              const value = properties[field];
+              if (value === null || value === '') {
+                if (!emptyFieldsMap.has(field)) {
+                  emptyFieldsMap.set(field, []);
+                }
+                emptyFieldsMap.get(field).push(featureCount);
+              }
+            }
+          }
+
+          if ('LUAS_HA' in properties) {
+            const value = properties.LUAS_HA;
+            if (value !== null && value !== '') {
+              const numericValue = parseFloat(value);
+              if (isNaN(numericValue)) {
+                invalidLuasHA.push(`Baris ke-${featureCount}: LUAS_HA harus numerik`);
+              } else {
+                const decimalPart = numericValue % 1;
+                if (decimalPart > 0.5) {
+                  invalidLuasHA.push(`Baris ke-${featureCount}: LUAS_HA desimal lebih dari 0.5`);
+                }
+              }
+            }
+          }
+        } while (!result.done);
+
+        if (featureCount === 0) {
+          errorMessages.push(`${shapefileIndex}. Shapefile ${baseName} tidak valid:\n    - Tidak memiliki data`);
+          continue;
+        }
+
+        let shapefileErrors = [];
+        if (missingFields.size > 0 || emptyFieldsMap.size > 0 || invalidLuasHA.length > 0) {
+          shapefileErrors.push(`${shapefileIndex}. Shapefile ${baseName} belum lengkap:`);
           if (missingFields.size > 0) {
-            errorMessages.push(`Field yang belum ditambahkan yaitu: ${Array.from(missingFields).join(', ')}.`);
+            shapefileErrors.push(`    a. Field yang belum ada:`);
+            Array.from(missingFields).forEach(field => {
+              shapefileErrors.push(`         - ${field}`);
+            });
           }
-          if (emptyFields.length > 0) {
-            errorMessages.push(`Data belum diisi/kosong pada ${emptyFields.join('; ')}`);
+          if (emptyFieldsMap.size > 0) {
+            shapefileErrors.push(`    b. Field yang kosong:`);
+            emptyFieldsMap.forEach((rows, field) => {
+              shapefileErrors.push(`         - ${field}, pada baris: ${rows.join(', ')}`);
+            });
           }
           if (invalidLuasHA.length > 0) {
-            errorMessages.push(invalidLuasHA.join('; '));
+            shapefileErrors.push(`    c. Kesalahan pada LUAS_HA:`);
+            invalidLuasHA.forEach(error => {
+              shapefileErrors.push(`         - ${error}`);
+            });
           }
-        }
-
-        if (errorMessages.length > 0) {
-          shapefileErrors.push(`${index}. Pada shapefile ${baseName} terdapat eror:\n   - ${errorMessages.join('\n   - ')}`);
+          errorMessages.push(shapefileErrors.join('\n'));
         } else {
-          shapefileErrors.push(`${index}. shapefile ${baseName} telah sesuai`);
+          successMessages.push(`${shapefileIndex}. Shapefile ${baseName} sudah lengkap`);
+          validShapefileCount++;
         }
-        index++;
       }
 
-      if (shapefileErrors.some(error => error.includes('terdapat eror'))) {
-        shapefileErrors.push('silakan perbaiki dan Upload ulang');
-        return { valid: false, error: shapefileErrors.join('\n') };
+      if (validShapefileCount === shpFiles.length) {
+        return { valid: true, success: 'Data sudah valid dan selesai diunggah' };
+      } else {
+        let combinedMessage = [];
+        if (successMessages.length > 0) {
+          combinedMessage.push(successMessages.join('\n'));
+        }
+        if (errorMessages.length > 0) {
+          combinedMessage.push(errorMessages.join('\n'));
+        }
+        combinedMessage.push('Harap perbaiki shapefile dan upload ulang');
+        return { valid: false, error: combinedMessage.join('\n') };
       }
-
-      return { valid: true };
     } catch (err) {
       console.error('Error validasi ZIP (FOLU):', err);
-      return { valid: false, error: `Gagal memvalidasi ZIP: ${err.message}` };
+      return { valid: false, error: `Gagal memvalidasi ZIP: ${err.message}\nHarap perbaiki shapefile dan upload ulang` };
     }
   };
 
@@ -165,13 +179,16 @@ const ShapefileFOLUForm = () => {
     setIsUploading(true);
 
     if (!file) {
-      setError('Pilih file ZIP terlebih dahulu!');
+      console.log('Tidak ada file dipilih');
+      setError('Silakan pilih file ZIP terlebih dahulu!');
       setIsUploading(false);
       return;
     }
 
+    console.log('Memulai validasi file:', file.name);
     const validation = await validateZip(file);
     if (!validation.valid) {
+      console.error('Validasi gagal:', validation.error);
       setError(validation.error);
       setIsUploading(false);
       return;
@@ -180,23 +197,27 @@ const ShapefileFOLUForm = () => {
     let filePath = '';
     try {
       const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
-      const dateString = now.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '.').toUpperCase();
-      const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }).replace(/:/g, '');
+      console.log('Waktu lokal:', now.toString());
+      const dateString = now.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '_').toUpperCase();
+      const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(/[:.]/g, '');
       const fileNameWithDate = `${dateString}_${timeString}_${file.name}`;
       filePath = `shapefiles/${fileNameWithDate}`;
+      console.log('Mengunggah ke:', { bucket: 'rhlfolu', filePath });
 
-      const { error: fileError } = await supabase.storage
+      const { data: uploadData, error: fileError } = await supabase.storage
         .from('rhlfolu')
         .upload(filePath, file, { upsert: true });
 
       if (fileError) {
-        console.error('Upload error (FOLU):', fileError);
+        console.error('Upload error:', fileError);
         setError('Gagal mengunggah: ' + fileError.message);
         setIsUploading(false);
         return;
       }
+      console.log('Upload sukses:', uploadData);
 
       const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+      console.log('Mengirim ke backend:', { zip_path: filePath, bucket: 'rhlfolu' });
       const response = await fetch(`${BACKEND_URL}/validate-shapefile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -204,18 +225,21 @@ const ShapefileFOLUForm = () => {
       });
 
       const result = await response.json();
+      console.log('Respons backend:', result);
+
       if (!response.ok) {
-        setError(result.error || 'Gagal memvalidasi shapefile.');
+        console.error('Backend error:', result);
+        setError(result.error || 'Gagal memproses shapefile.');
         await supabase.storage.from('rhlfolu').remove([filePath]);
         setIsUploading(false);
         return;
       }
 
-      setSuccess('Shapefile berhasil diunggah dan divalidasi!');
+      setSuccess(validation.success);
       setFile(null);
       document.getElementById('shapefileFOLUInput').value = '';
     } catch (err) {
-      console.error('Error umum (FOLU):', err);
+      console.error('Error umum:', err);
       setError('Terjadi kesalahan: ' + err.message);
       if (filePath) {
         await supabase.storage.from('rhlfolu').remove([filePath]);
@@ -228,9 +252,9 @@ const ShapefileFOLUForm = () => {
   return (
     <div className="form-container">
       <h2>Upload Shapefile RHL FOLU</h2>
-      {error && <p className="error">{error}</p>}
+      {error && <pre className="error">{error}</pre>}
       {success && <p className="success">{success}</p>}
-      {isUploading && <p className="uploading">Sedang mengunggah...</p>}
+      {isUploading && <p className="uploading">Sedang mengunggah shapefile...</p>}
       <form onSubmit={handleSubmit}>
         <div className="input-group">
           <label htmlFor="shapefileFOLUInput" className="file-input-label">
@@ -249,8 +273,8 @@ const ShapefileFOLUForm = () => {
           <div className="file-name-box">
             {file ? file.name : 'Tidak ada file dipilih'}
           </div>
-          <button type="submit" disabled={isUploading} className="btn-orange">
-            Unggah
+          <button type="submit" disabled={isUploading} className="upload-button">
+            {isUploading ? 'Mengunggah...' : 'Unggah'}
           </button>
         </div>
       </form>

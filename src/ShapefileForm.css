@@ -5,21 +5,32 @@
   border: 1px solid #ccc;
   border-radius: 5px;
   text-align: left; /* Pastikan kontainer form rata kiri */
+  background-color: #f9f9f9; /* Tambah background biar lebih modern */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Tambah shadow halus */
 }
 
 .error {
-  color: red;
+  color: #dc3545; /* Merah lebih soft */
+  background-color: #f8d7da; /* Background merah muda */
+  padding: 10px;
+  border-radius: 4px;
   text-align: left; /* Pastikan pesan error rata kiri */
   white-space: pre-wrap; /* Pertahankan format baris baru */
 }
 
 .success {
-  color: green;
+  color: #155724; /* Hijau lebih soft */
+  background-color: #d4edda; /* Background hijau muda */
+  padding: 10px;
+  border-radius: 4px;
   text-align: left; /* Pastikan pesan sukses rata kiri */
 }
 
 .uploading {
-  color: blue;
+  color: #856404; /* Kuning tua untuk kontras */
+  background-color: #fff3cd; /* Background kuning muda */
+  padding: 10px;
+  border-radius: 4px;
   text-align: left; /* Pastikan pesan uploading rata kiri */
 }
 
@@ -31,18 +42,40 @@
 
 .file-input-label {
   font-weight: bold;
+  color: #555; /* Abu-abu gelap untuk kontras */
 }
 
 .file-input {
   padding: 5px;
+  border: 1px solid #ddd; /* Tambah border biar rapi */
+  border-radius: 4px;
 }
 
 .file-name-box {
   border: 1px solid #ccc;
   padding: 5px;
   min-height: 20px;
+  background-color: #fff; /* Background putih biar bersih */
+  border-radius: 4px;
 }
 
+.upload-button {
+  background-color: #28a745; /* Hijau seperti tombol sukses */
+  color: white;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px; /* Biar teks tombol lebih jelas */
+}
+
+.upload-button:disabled {
+  background-color: #cccccc; /* Abu-abu saat disabled */
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Pertahankan styling tombol lama kalau masih dipakai di tempat lain */
 .btn-blue {
   background-color: #007bff;
   color: white;
@@ -68,9 +101,4 @@
   border: none;
   border-radius: 5px;
   cursor: pointer;
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
