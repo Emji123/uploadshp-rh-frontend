@@ -4,34 +4,34 @@
   padding: 20px;
   border: 1px solid #ccc;
   border-radius: 5px;
-  text-align: left; /* Pastikan kontainer form rata kiri */
-  background-color: #f9f9f9; /* Tambah background biar lebih modern */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Tambah shadow halus */
+  text-align: left;
+  background-color: #f9f9f9;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .error {
-  color: #dc3545; /* Merah lebih soft */
-  background-color: #f8d7da; /* Background merah muda */
+  color: #dc3545;
+  background-color: #f8d7da;
   padding: 10px;
   border-radius: 4px;
-  text-align: left; /* Pastikan pesan error rata kiri */
-  white-space: pre-wrap; /* Pertahankan format baris baru */
+  text-align: left;
+  white-space: pre-wrap;
 }
 
 .success {
-  color: #155724; /* Hijau lebih soft */
-  background-color: #d4edda; /* Background hijau muda */
+  color: #155724;
+  background-color: #d4edda;
   padding: 10px;
   border-radius: 4px;
-  text-align: left; /* Pastikan pesan sukses rata kiri */
+  text-align: left;
 }
 
 .uploading {
-  color: #856404; /* Kuning tua untuk kontras */
-  background-color: #fff3cd; /* Background kuning muda */
+  color: #856404;
+  background-color: #fff3cd;
   padding: 10px;
   border-radius: 4px;
-  text-align: left; /* Pastikan pesan uploading rata kiri */
+  text-align: left;
 }
 
 .input-group {
@@ -42,12 +42,12 @@
 
 .file-input-label {
   font-weight: bold;
-  color: #555; /* Abu-abu gelap untuk kontras */
+  color: #555;
 }
 
 .file-input {
   padding: 5px;
-  border: 1px solid #ddd; /* Tambah border biar rapi */
+  border: 1px solid #ddd;
   border-radius: 4px;
 }
 
@@ -55,27 +55,26 @@
   border: 1px solid #ccc;
   padding: 5px;
   min-height: 20px;
-  background-color: #fff; /* Background putih biar bersih */
+  background-color: #fff;
   border-radius: 4px;
 }
 
 .upload-button {
-  background-color: #28a745; /* Hijau seperti tombol sukses */
+  background-color: #28a745;
   color: white;
   padding: 10px;
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  font-size: 16px; /* Biar teks tombol lebih jelas */
+  font-size: 16px;
 }
 
 .upload-button:disabled {
-  background-color: #cccccc; /* Abu-abu saat disabled */
+  background-color: #cccccc;
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-/* Pertahankan styling tombol lama kalau masih dipakai di tempat lain */
 .btn-blue {
   background-color: #007bff;
   color: white;
@@ -101,4 +100,12 @@
   border: none;
   border-radius: 5px;
   cursor: pointer;
+}
+
+.subheader {
+  font-size: 12px;
+  color: #555;
+  margin-top: 10px; /* Jarak ke judul */
+  margin-bottom: 20px; /* Jarak ke form */
+  text-align: center; /* Rata tengah seperti judul */
 }
