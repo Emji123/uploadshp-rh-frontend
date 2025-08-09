@@ -9,22 +9,58 @@ const supabase = createClient(
   process.env.REACT_APP_SUPABASE_KEY
 );
 
-const ShapefileFOLUForm = () => {
+const ShapefileUploadForm = () => {
+  const [bpdas, setBpdas] = useState('');
+  const [year, setYear] = useState('');
+  const [activity, setActivity] = useState('');
   const [file, setFile] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isUploading, setIsUploading] = useState(false);
 
-  const requiredFields = [
-    'ID_RHL', 'BPDAS', 'UR_BPDAS', 'PELAKSANA', 'PROV', 'KAB', 'KEC', 'DESA',
-    'NAMA_BLOK', 'LUAS_HA', 'TIPE_KNTRK', 'PEMANGKU', 'FUNGSI', 'ARAHAN',
-    'POLA', 'BTG_HA', 'THN_TNM', 'JENIS_TNM', 'BTG_TOTAL', 'TGL_KNTRK',
-    'NO_KNTRK', 'NILAI_KNTR'
+  const bpdasOptions = [
+    'krueng_aceh', 'wampu_se drop_zei_ular', 'asahan_barumun', 'agam_kuantan',
+    'indragiri_rokan', 'batanghari', 'ketahun', 'musi', 'baturusa_cerucuk',
+    'sei_jang_duriangkang', 'way_seputih_sekampung', 'citarum_ciliwung',
+    'cimanuk_citanduy', 'pemali_jratun', 'solo', 'serayu_opak_progo',
+    'brantas_sampean', 'kapuas', 'kahayan', 'barito', 'mahakam_berau',
+    'tondano', 'bone_limboto', 'palu_poso', 'karama', 'jeneberang_saddang',
+    'konaweha', 'unda_anyar', 'dodokan_moyosari', 'benain_noelmina',
+    'waehapu_batu_merah', 'ake_malamo', 'remu_ransiki', 'memberamo'
   ];
+
+  const years = Array.from({ length: 2026 - 2019 + 1 }, (_, i) => 2019 + i);
+  const activities = ['RHL Vegetatif', 'RHL UPSA', 'RHL FOLU'];
+
+  const requiredFieldsMap = {
+    'RHL Vegetatif': [
+      'ID_RHL', 'BPDAS', 'UR_BPDAS', 'PELAKSANA', 'PROV', 'KAB', 'KEC', 'DESA',
+      'NAMA_BLOK', 'LUAS_HA', 'TIPE_KNTRK', 'PEMANGKU', 'FUNGSI', 'ARAHAN',
+      'POLA', 'BTG_HA', 'THN_TNM', 'JENIS_TNM', 'BTG_TOTAL', 'TGL_KNTRK',
+      'NO_KNTRK', 'NILAI_KNTR'
+    ],
+    'RHL UPSA': [
+      'ID', 'BPDAS', 'UR_BPDAS', 'WADMPR', 'WADMKK', 'WADMKC', 'DESA',
+      'KELOMPOK', 'THN_BUAT', 'LUAS_HA', 'JENIS_TNM', 'BTG_TOTAL', 'BTG_HA',
+      'SPL_TEKNIS', 'FUNGSI_KWS', 'KET'
+    ],
+    'RHL FOLU': [
+      'ID_RHL', 'BPDAS', 'UR_BPDAS', 'PELAKSANA', 'PROV', 'KAB', 'KEC', 'DESA',
+      'NAMA_BLOK', 'LUAS_HA', 'TIPE_KNTRK', 'PEMANGKU', 'FUNGSI', 'ARAHAN',
+      'POLA', 'BTG_HA', 'THN_TNM', 'JENIS_TNM', 'BTG_TOTAL', 'TGL_KNTRK',
+      'NO_KNTRK', 'NILAI_KNTR'
+    ]
+  };
+
+  const bucketMap = {
+    'RHL Vegetatif': 'rhlvegetatif',
+    'RHL UPSA': 'rhlupsa',
+    'RHL FOLU': 'rhlfolu'
+  };
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
-    console.log('File dipilih (FOLU):', selectedFile ? selectedFile.name : 'Tidak ada file');
+    console.log(`File dipilih (${activity}):`, selectedFile ? selectedFile.name : 'Tidak ada file');
     setFile(selectedFile);
     setError('');
     setSuccess('');
@@ -32,7 +68,7 @@ const ShapefileFOLUForm = () => {
 
   const validateZip = async (zipFile) => {
     try {
-      console.log('Validasi ZIP (FOLU):', zipFile.name);
+      console.log(`Validasi ZIP (${activity}):`, zipFile.name);
       const zip = new JSZip();
       const content = await zip.loadAsync(zipFile);
       const files = Object.keys(content.files);
@@ -90,7 +126,7 @@ const ShapefileFOLUForm = () => {
           }
           console.log('Properti fitur:', properties);
 
-          for (const field of requiredFields) {
+          for (const field of requiredFieldsMap[activity]) {
             if (!(field in properties)) {
               missingFields.add(field);
             } else {
@@ -167,7 +203,7 @@ const ShapefileFOLUForm = () => {
         return { valid: false, error: combinedMessage.join('\n') };
       }
     } catch (err) {
-      console.error('Error validasi ZIP (FOLU):', err);
+      console.error(`Error validasi ZIP (${activity}):`, err);
       return { valid: false, error: `Gagal memvalidasi ZIP: ${err.message}\nHarap perbaiki shapefile dan upload ulang` };
     }
   };
@@ -201,11 +237,11 @@ const ShapefileFOLUForm = () => {
       const dateString = now.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '_').toUpperCase();
       const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(/[:.]/g, '');
       const fileNameWithDate = `${dateString}_${timeString}_${file.name}`;
-      filePath = `shapefiles/${fileNameWithDate}`;
-      console.log('Mengunggah ke:', { bucket: 'rhlfolu', filePath });
+      filePath = `shapefiles/${bpdas}/${year}/${fileNameWithDate}`;
+      console.log('Mengunggah ke:', { bucket: bucketMap[activity], filePath });
 
       const { data: uploadData, error: fileError } = await supabase.storage
-        .from('rhlfolu')
+        .from(bucketMap[activity])
         .upload(filePath, file, { upsert: true });
 
       if (fileError) {
@@ -217,11 +253,11 @@ const ShapefileFOLUForm = () => {
       console.log('Upload sukses:', uploadData);
 
       const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
-      console.log('Mengirim ke backend:', { zip_path: filePath, bucket: 'rhlfolu' });
+      console.log('Mengirim ke backend:', { zip_path: filePath, bucket: bucketMap[activity] });
       const response = await fetch(`${BACKEND_URL}/validate-shapefile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ zip_path: filePath, bucket: 'rhlfolu' })
+        body: JSON.stringify({ zip_path: filePath, bucket: bucketMap[activity] })
       });
 
       const result = await response.json();
@@ -230,19 +266,19 @@ const ShapefileFOLUForm = () => {
       if (!response.ok) {
         console.error('Backend error:', result);
         setError(result.error || 'Gagal memproses shapefile.');
-        await supabase.storage.from('rhlfolu').remove([filePath]);
+        await supabase.storage.from(bucketMap[activity]).remove([filePath]);
         setIsUploading(false);
         return;
       }
 
-      setSuccess(validation.success);
+      setSuccess Diversity for All
       setFile(null);
-      document.getElementById('shapefileFOLUInput').value = '';
+      document.getElementById('shapefileInput').value = '';
     } catch (err) {
       console.error('Error umum:', err);
       setError('Terjadi kesalahan: ' + err.message);
       if (filePath) {
-        await supabase.storage.from('rhlfolu').remove([filePath]);
+        await supabase.storage.from(bucketMap[activity]).remove([filePath]);
       }
     } finally {
       setIsUploading(false);
@@ -251,35 +287,89 @@ const ShapefileFOLUForm = () => {
 
   return (
     <div className="form-container">
-      <h2>Upload Shapefile RHL FOLU</h2>
-      {error && <pre className="error">{error}</pre>}
-      {success && <p className="success">{success}</p>}
-      {isUploading && <p className="uploading">Sedang mengunggah shapefile...</p>}
-      <form onSubmit={handleSubmit}>
-        <div className="input-group">
-          <label htmlFor="shapefileFOLUInput" className="file-input-label">
-            Pilih File .zip FOLU
-          </label>
-          <input
-            type="file"
-            id="shapefileFOLUInput"
-            name="shapefile"
-            onChange={handleFileChange}
-            accept=".zip"
+      <h2>Upload Shapefile</h2>
+      <div className="dropdown-group">
+        <div className="dropdown-item">
+          <label htmlFor="bpdasSelect">BPDAS</label>
+          <select
+            id="bpdasSelect"
+            value={bpdas}
+            onChange={(e) => setBpdas(e.target.value)}
             required
-            disabled={isUploading}
-            className="file-input"
-          />
-          <div className="file-name-box">
-            {file ? file.name : 'Tidak ada file dipilih'}
-          </div>
-          <button type="submit" disabled={isUploading} className="upload-button">
-            {isUploading ? 'Mengunggah...' : 'Unggah'}
-          </button>
+          >
+            <option value="">Pilih BPDAS</option>
+            {bpdasOptions.map((option) => (
+              <option key={option} value={option}>
+                {option.replace(/_/g, ' ').toUpperCase()}
+              </option>
+            ))}
+          </select>
         </div>
-      </form>
+        <div className="dropdown-item">
+          <label htmlFor="yearSelect">Tahun</label>
+          <select
+            id="yearSelect"
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            required
+          >
+            <option value="">Pilih Tahun</option>
+            {years.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="dropdown-item">
+          <label htmlFor="activitySelect">Kegiatan</label>
+          <select
+            id="activitySelect"
+            value={activity}
+            onChange={(e) => setActivity(e.target.value)}
+            required
+          >
+            <option value="">Pilih Kegiatan</option>
+            {activities.map((act) => (
+              <option key={act} value={act}>
+                {act}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      {bpdas && year && activity && (
+        <div className="upload-form">
+          {error && <pre className="error">{error}</pre>}
+          {success && <p className="success">{success}</p>}
+          {isUploading && <p className="uploading">Sedang mengunggah shapefile...</p>}
+          <form onSubmit={handleSubmit}>
+            <div className="input-group">
+              <label htmlFor="shapefileInput" className="file-input-label">
+                Pilih File .zip {activity}
+              </label>
+              <input
+                type="file"
+                id="shapefileInput"
+                name="shapefile"
+                onChange={handleFileChange}
+                accept=".zip"
+                required
+                disabled={isUploading}
+                className="file-input"
+              />
+              <div className="file-name-box">
+                {file ? file.name : 'Tidak ada file dipilih'}
+              </div>
+              <button type="submit" disabled={isUploading} className="upload-button">
+                {isUploading ? 'Mengunggah...' : 'Unggah'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };
 
-export default ShapefileFOLUForm;
+export default ShapefileUploadForm;
