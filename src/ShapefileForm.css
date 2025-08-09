@@ -1,72 +1,138 @@
+/* General form container styling */
 .form-container {
   margin: 20px auto;
   max-width: 600px;
   padding: 20px;
   border: 1px solid #ccc;
   border-radius: 5px;
-  text-align: left;
   background-color: #f9f9f9;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.error {
-  color: #dc3545;
-  background-color: #f8d7da;
-  padding: 10px;
-  border-radius: 4px;
-  text-align: left;
-  white-space: pre-wrap;
-}
-
-.success {
-  color: #155724;
-  background-color: #d4edda;
-  padding: 10px;
-  border-radius: 4px;
   text-align: left;
 }
 
-.uploading {
-  color: #856404;
-  background-color: #fff3cd;
-  padding: 10px;
-  border-radius: 4px;
-  text-align: left;
+/* Form heading */
+.form-container h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  margin-bottom: 1.5rem;
 }
 
+/* Dropdown group styling */
+.dropdown-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+/* Individual dropdown item */
+.dropdown-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Label styling */
+.dropdown-item label {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #555;
+}
+
+/* Select dropdown styling */
+.dropdown-item select {
+  appearance: none;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 10px 30px 10px 10px;
+  font-size: 0.9rem;
+  color: #333;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23555' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.dropdown-item select:focus {
+  outline: none;
+  border-color: #28a745;
+  box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
+}
+
+.dropdown-item select:hover {
+  border-color: #aaa;
+}
+
+/* Upload form styling */
+.upload-form {
+  background-color: #fff;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+/* Input group styling */
 .input-group {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
+/* File input label */
 .file-input-label {
   font-weight: bold;
   color: #555;
 }
 
+/* File input styling */
 .file-input {
   padding: 5px;
   border: 1px solid #ddd;
-  border-radius: 4px;
+  border-radius: 5px;
+  background-color: #fff;
+  font-size: 0.9rem;
+  color: #333;
+  cursor: pointer;
 }
 
+.file-input:disabled {
+  background-color: #f9f9f9;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* File name box */
 .file-name-box {
   border: 1px solid #ccc;
   padding: 5px;
   min-height: 20px;
   background-color: #fff;
-  border-radius: 4px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  color: #555;
+  text-align: center;
 }
 
+/* Upload button */
 .upload-button {
   background-color: #28a745;
   color: white;
   padding: 10px;
   border: none;
   border-radius: 5px;
-  cursor: pointer;
   font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.upload-button:hover:not(:disabled) {
+  background-color: #218838;
+  transform: translateY(-1px);
 }
 
 .upload-button:disabled {
@@ -75,37 +141,63 @@
   cursor: not-allowed;
 }
 
-.btn-blue {
-  background-color: #007bff;
-  color: white;
+/* Error message */
+.error {
+  color: #dc3545;
+  background-color: #f8d7da;
   padding: 10px;
-  border: none;
   border-radius: 5px;
-  cursor: pointer;
+  font-size: 0.9rem;
+  text-align: left;
+  white-space: pre-wrap;
 }
 
-.btn-pink {
-  background-color: #ff69b4;
-  color: white;
+/* Success message */
+.success {
+  color: #155724;
+  background-color: #d4edda;
   padding: 10px;
-  border: none;
   border-radius: 5px;
-  cursor: pointer;
+  font-size: 0.9rem;
+  text-align: center;
 }
 
-.btn-orange {
-  background-color: #ffa500;
-  color: white;
+/* Uploading message */
+.uploading {
+  color: #856404;
+  background-color: #fff3cd;
   padding: 10px;
-  border: none;
   border-radius: 5px;
-  cursor: pointer;
+  font-size: 0.9rem;
+  text-align: center;
 }
 
+/* Subheader (used in App.js) */
 .subheader {
   font-size: 12px;
   color: #555;
-  margin-top: 10px; /* Jarak ke judul */
-  margin-bottom: 20px; /* Jarak ke form */
-  text-align: center; /* Rata tengah seperti judul */
+  margin-top: 10px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .dropdown-group {
+    grid-template-columns: 1fr;
+  }
+
+  .form-container {
+    padding: 15px;
+    margin: 10px;
+  }
+
+  .upload-form {
+    padding: 10px;
+  }
+
+  .upload-button {
+    font-size: 14px;
+    padding: 8px;
+  }
 }
