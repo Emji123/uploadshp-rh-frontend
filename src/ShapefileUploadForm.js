@@ -19,7 +19,7 @@ const ShapefileUploadForm = () => {
   const [isUploading, setIsUploading] = useState(false);
 
   const bpdasOptions = [
-    'krueng_aceh', 'wampu_se drop_zei_ular', 'asahan_barumun', 'agam_kuantan',
+    'krueng_aceh', 'wampu_sei_ular', 'asahan_barumun', 'agam_kuantan',
     'indragiri_rokan', 'batanghari', 'ketahun', 'musi', 'baturusa_cerucuk',
     'sei_jang_duriangkang', 'way_seputih_sekampung', 'citarum_ciliwung',
     'cimanuk_citanduy', 'pemali_jratun', 'solo', 'serayu_opak_progo',
@@ -271,7 +271,7 @@ const ShapefileUploadForm = () => {
         return;
       }
 
-      setSuccess Diversity for All
+      setSuccess('Data sudah valid dan selesai diunggah');
       setFile(null);
       document.getElementById('shapefileInput').value = '';
     } catch (err) {
