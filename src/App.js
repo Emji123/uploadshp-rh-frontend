@@ -1,10 +1,8 @@
 import React from 'react';
-import ShapefileRHLVegetatifForm from './ShapefileRHLVegetatifForm';
-import ShapefileUPSAForm from './ShapefileUPSAForm';
-import ShapefileFOLUForm from './ShapefileFOLUForm';
+import ShapefileUploadForm from './ShapefileUploadForm';
 import Keterangan from './Keterangan';
 import './App.css';
-import './ShapefileForm.css'; // Import CSS untuk subheader
+import './ShapefileForm.css';
 
 function App() {
   return (
@@ -13,9 +11,7 @@ function App() {
         <h1>FORM UPLOAD SHAPEFILE DIREKTORAT REHABILITASI HUTAN</h1>
         <p className="subheader">(Silakan baca keterangan terlebih dahulu di bagian paling bawah)</p>
       </div>
-      <ShapefileRHLVegetatifForm />
-      <ShapefileUPSAForm />
-      <ShapefileFOLUForm />
+      <ShapefileUploadForm />
       <Keterangan />
     </div>
   );
