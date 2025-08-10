@@ -1,13 +1,7 @@
 import React, { useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import JSZip from 'jszip';
 import { openDbf } from 'shapefile';
 import './ShapefileForm.css';
-
-const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL,
-  process.env.REACT_APP_SUPABASE_KEY
-);
 
 const ShapefileUploadForm = () => {
   const [bpdas, setBpdas] = useState('');
@@ -230,34 +224,18 @@ const ShapefileUploadForm = () => {
       return;
     }
 
-    let filePath = '';
     try {
-      const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
-      console.log('Waktu lokal:', now.toString());
-      const dateString = now.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '_').toUpperCase();
-      const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(/[:.]/g, '');
-      const fileNameWithDate = `${dateString}_${timeString}_${file.name}`;
-      filePath = `shapefiles/${bpdas}/${year}/${fileNameWithDate}`;
-      console.log('Mengunggah ke:', { bucket: bucketMap[activity], filePath });
-
-      const { data: uploadData, error: fileError } = await supabase.storage
-        .from(bucketMap[activity])
-        .upload(filePath, file, { upsert: true });
-
-      if (fileError) {
-        console.error('Upload error:', fileError);
-        setError('Gagal mengunggah: ' + fileError.message);
-        setIsUploading(false);
-        return;
-      }
-      console.log('Upload sukses:', uploadData);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('bpdas', bpdas);
+      formData.append('year', year);
+      formData.append('activity', activity);
 
       const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
-      console.log('Mengirim ke backend:', { zip_path: filePath, bucket: bucketMap[activity] });
+      console.log('Mengirim ke backend:', { bpdas, year, activity, file: file.name });
       const response = await fetch(`${BACKEND_URL}/validate-shapefile`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ zip_path: filePath, bucket: bucketMap[activity] })
+        body: formData
       });
 
       const result = await response.json();
@@ -266,7 +244,6 @@ const ShapefileUploadForm = () => {
       if (!response.ok) {
         console.error('Backend error:', result);
         setError(result.error || 'Gagal memproses shapefile.');
-        await supabase.storage.from(bucketMap[activity]).remove([filePath]);
         setIsUploading(false);
         return;
       }
@@ -277,9 +254,6 @@ const ShapefileUploadForm = () => {
     } catch (err) {
       console.error('Error umum:', err);
       setError('Terjadi kesalahan: ' + err.message);
-      if (filePath) {
-        await supabase.storage.from(bucketMap[activity]).remove([filePath]);
-      }
     } finally {
       setIsUploading(false);
     }
