@@ -1,3 +1,4 @@
+// src/ShapefileUploadForm.js (updated to remove unused bucketMap)
 import React, { useState } from 'react';
 import JSZip from 'jszip';
 import { openDbf } from 'shapefile';
@@ -44,12 +45,6 @@ const ShapefileUploadForm = () => {
       'POLA', 'BTG_HA', 'THN_TNM', 'JENIS_TNM', 'BTG_TOTAL', 'TGL_KNTRK',
       'NO_KNTRK', 'NILAI_KNTR'
     ]
-  };
-
-  const bucketMap = {
-    'RHL Vegetatif': 'rhlvegetatif',
-    'RHL UPSA': 'rhlupsa',
-    'RHL FOLU': 'rhlfolu'
   };
 
   const handleFileChange = (e) => {
