@@ -1,5 +1,7 @@
-// src/ShapefileUploadForm.js
+// src/ShapefileUploadForm.js (updated to remove unused bucketMap)
 import React, { useState } from 'react';
+import JSZip from 'jszip';
+import { openDbf } from 'shapefile';
 import './ShapefileForm.css';
 
 const ShapefileUploadForm = () => {
@@ -25,11 +27,180 @@ const ShapefileUploadForm = () => {
   const years = Array.from({ length: 2026 - 2019 + 1 }, (_, i) => 2019 + i);
   const activities = ['RHL Vegetatif', 'RHL UPSA', 'RHL FOLU'];
 
+  const requiredFieldsMap = {
+  'RHL Vegetatif': [
+    'ID_RHL', 'BPDAS', 'UR_BPDAS', 'PELAKSANA',
+    'WADMPROV', 'WADMKAB', 'WADMKEC', 'WADMDES',
+    'NAMA_BLOK', 'LUAS_HA', 'TIPE_KNTRK', 'PEMANGKU', 'FUNGSI',
+    'POLA', 'BTG_HA', 'THN_TNM', 'JNS_TNM',
+    'BTG_TOTAL', 'TGL_KNTRK', 'NO_KNTRK', 'NILAI_KNTR'
+  ],
+
+  'RHL UPSA': [
+    'ID', 'BPDAS', 'UR_BPDAS',
+    'WADMPR', 'WADMKK', 'WADMKC', 'DESA',
+    'KELOMPOK', 'THN_BUAT', 'LUAS_HA', 'JENIS_TNM',
+    'BTG_TOTAL', 'BTG_HA',
+    'SPL_TEKNIS', 'FUNGSI_KWS', 'KET'
+  ],
+
+  'RHL FOLU': [
+    'ID_RHL', 'BPDAS', 'UR_BPDAS', 'PELAKSANA',
+    'WADMPROV', 'WADMKAB', 'WADMKEC', 'WADMDES',
+    'NAMA_BLOK', 'LUAS_HA', 'TIPE_KNTRK', 'PEMANGKU', 'FUNGSI',
+    'POLA', 'BTG_HA', 'THN_TNM', 'JNS_TNM',
+    'BTG_TOTAL', 'TGL_KNTRK', 'NO_KNTRK', 'NILAI_KNTR'
+  ]
+  };
+
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
+    console.log(`File dipilih (${activity}):`, selectedFile ? selectedFile.name : 'Tidak ada file');
     setFile(selectedFile);
     setError('');
     setSuccess('');
+  };
+
+  const validateZip = async (zipFile) => {
+    try {
+      console.log(`Validasi ZIP (${activity}):`, zipFile.name);
+      const zip = new JSZip();
+      const content = await zip.loadAsync(zipFile);
+      const files = Object.keys(content.files);
+      console.log('File di ZIP:', files);
+
+      const shpFiles = files.filter(name => name.toLowerCase().endsWith('.shp'));
+      if (shpFiles.length === 0) {
+        return { valid: false, error: 'File ZIP harus berisi setidaknya satu file .shp.' };
+      }
+
+      const successMessages = [];
+      const errorMessages = [];
+      let shapefileIndex = 0;
+      let validShapefileCount = 0;
+
+      for (const shpFile of shpFiles) {
+        shapefileIndex++;
+        const baseName = shpFile.substring(0, shpFile.length - 4).toLowerCase();
+        console.log('Memvalidasi shapefile:', baseName);
+
+        const shxFile = files.find(name => name.toLowerCase() === `${baseName}.shx`);
+        const dbfFile = files.find(name => name.toLowerCase() === `${baseName}.dbf`);
+
+        if (!shxFile || !dbfFile) {
+          errorMessages.push(`${shapefileIndex}. Shapefile ${baseName} belum lengkap:\n    - Harus memiliki .shp, .shx, dan .dbf`);
+          continue;
+        }
+
+        const dbfContent = await content.file(dbfFile).async('arraybuffer');
+        const source = await openDbf(dbfContent);
+        console.log('Membuka .dbf:', dbfFile);
+
+        let missingFields = new Set();
+        let emptyFieldsMap = new Map();
+        let invalidLuasHA = [];
+        let featureCount = 0;
+
+        let result;
+        do {
+          result = await source.read();
+          console.log('Fitur:', result);
+          if (result.done) break;
+
+          featureCount++;
+          const feature = result.value;
+          if (!feature) {
+            errorMessages.push(`${shapefileIndex}. Shapefile ${baseName} tidak valid:\n    - Baris ke-${featureCount} tidak valid`);
+            break;
+          }
+
+          const properties = feature.properties || feature;
+          if (!properties || typeof properties !== 'object') {
+            errorMessages.push(`${shapefileIndex}. Shapefile ${baseName} tidak valid:\n    - Baris ke-${featureCount} tidak memiliki properti valid`);
+            break;
+          }
+          console.log('Properti fitur:', properties);
+
+          for (const field of requiredFieldsMap[activity]) {
+            if (!(field in properties)) {
+              missingFields.add(field);
+            } else {
+              const value = properties[field];
+              if (value === null || value === '') {
+                if (!emptyFieldsMap.has(field)) {
+                  emptyFieldsMap.set(field, []);
+                }
+                emptyFieldsMap.get(field).push(featureCount);
+              }
+            }
+          }
+
+          if ('LUAS_HA' in properties) {
+            const value = properties.LUAS_HA;
+            if (value !== null && value !== '') {
+              const numericValue = parseFloat(value);
+              if (isNaN(numericValue)) {
+                invalidLuasHA.push(`Baris ke-${featureCount}: LUAS_HA harus numerik`);
+              } else {
+                const decimalPart = numericValue % 1;
+                if (decimalPart > 0.5) {
+                  invalidLuasHA.push(`Baris ke-${featureCount}: LUAS_HA desimal lebih dari 0.5`);
+                }
+              }
+            }
+          }
+        } while (!result.done);
+
+        if (featureCount === 0) {
+          errorMessages.push(`${shapefileIndex}. Shapefile ${baseName} tidak valid:\n    - Tidak memiliki data`);
+          continue;
+        }
+
+        let shapefileErrors = [];
+        if (missingFields.size > 0 || emptyFieldsMap.size > 0 || invalidLuasHA.length > 0) {
+          shapefileErrors.push(`${shapefileIndex}. Shapefile ${baseName} belum lengkap:`);
+          if (missingFields.size > 0) {
+            shapefileErrors.push(`    a. Field yang belum ada:`);
+            Array.from(missingFields).forEach(field => {
+              shapefileErrors.push(`         - ${field}`);
+            });
+          }
+          if (emptyFieldsMap.size > 0) {
+            shapefileErrors.push(`    b. Field yang kosong:`);
+            emptyFieldsMap.forEach((rows, field) => {
+              shapefileErrors.push(`         - ${field}, pada baris: ${rows.join(', ')}`);
+            });
+          }
+          if (invalidLuasHA.length > 0) {
+            shapefileErrors.push(`    c. Kesalahan pada LUAS_HA:`);
+            invalidLuasHA.forEach(error => {
+              shapefileErrors.push(`         - ${error}`);
+            });
+          }
+          errorMessages.push(shapefileErrors.join('\n'));
+        } else {
+          successMessages.push(`${shapefileIndex}. Shapefile ${baseName} sudah lengkap`);
+          validShapefileCount++;
+        }
+      }
+
+      if (validShapefileCount === shpFiles.length) {
+        return { valid: true, success: 'Data sudah valid dan selesai diunggah' };
+      } else {
+        let combinedMessage = [];
+        if (successMessages.length > 0) {
+          combinedMessage.push(successMessages.join('\n'));
+        }
+        if (errorMessages.length > 0) {
+          combinedMessage.push(errorMessages.join('\n'));
+        }
+        combinedMessage.push('Harap perbaiki shapefile dan upload ulang');
+        return { valid: false, error: combinedMessage.join('\n') };
+      }
+    } catch (err) {
+      console.error(`Error validasi ZIP (${activity}):`, err);
+      return { valid: false, error: `Gagal memvalidasi ZIP: ${err.message}\nHarap perbaiki shapefile dan upload ulang` };
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -39,7 +210,17 @@ const ShapefileUploadForm = () => {
     setIsUploading(true);
 
     if (!file) {
+      console.log('Tidak ada file dipilih');
       setError('Silakan pilih file ZIP terlebih dahulu!');
+      setIsUploading(false);
+      return;
+    }
+
+    console.log('Memulai validasi file:', file.name);
+    const validation = await validateZip(file);
+    if (!validation.valid) {
+      console.error('Validasi gagal:', validation.error);
+      setError(validation.error);
       setIsUploading(false);
       return;
     }
@@ -51,23 +232,28 @@ const ShapefileUploadForm = () => {
       formData.append('year', year);
       formData.append('activity', activity);
 
-      const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+      const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+      console.log('Mengirim ke backend:', { bpdas, year, activity, file: file.name });
       const response = await fetch(`${BACKEND_URL}/validate-shapefile`, {
         method: 'POST',
         body: formData
       });
 
       const result = await response.json();
+      console.log('Respons backend:', result);
 
       if (!response.ok) {
+        console.error('Backend error:', result);
         setError(result.error || 'Gagal memproses shapefile.');
+        setIsUploading(false);
         return;
       }
 
-      setSuccess(result.message || 'Validasi berhasil');
+      setSuccess('Data sudah valid dan selesai diunggah');
       setFile(null);
       document.getElementById('shapefileInput').value = '';
     } catch (err) {
+      console.error('Error umum:', err);
       setError('Terjadi kesalahan: ' + err.message);
     } finally {
       setIsUploading(false);
@@ -77,67 +263,85 @@ const ShapefileUploadForm = () => {
   return (
     <div className="form-container">
       <h2>Upload Shapefile</h2>
-
       <div className="dropdown-group">
         <div className="dropdown-item">
-          <label>BPDAS</label>
-          <select value={bpdas} onChange={(e) => setBpdas(e.target.value)} required>
+          <label htmlFor="bpdasSelect">BPDAS</label>
+          <select
+            id="bpdasSelect"
+            value={bpdas}
+            onChange={(e) => setBpdas(e.target.value)}
+            required
+          >
             <option value="">Pilih BPDAS</option>
-            {bpdasOptions.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt.replace(/_/g, ' ').toUpperCase()}
+            {bpdasOptions.map((option) => (
+              <option key={option} value={option}>
+                {option.replace(/_/g, ' ').toUpperCase()}
               </option>
             ))}
           </select>
         </div>
-
         <div className="dropdown-item">
-          <label>Tahun</label>
-          <select value={year} onChange={(e) => setYear(e.target.value)} required>
+          <label htmlFor="yearSelect">Tahun</label>
+          <select
+            id="yearSelect"
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            required
+          >
             <option value="">Pilih Tahun</option>
             {years.map((y) => (
-              <option key={y} value={y}>{y}</option>
+              <option key={y} value={y}>
+                {y}
+              </option>
             ))}
           </select>
         </div>
-
         <div className="dropdown-item">
-          <label>Kegiatan</label>
-          <select value={activity} onChange={(e) => setActivity(e.target.value)} required>
+          <label htmlFor="activitySelect">Kegiatan</label>
+          <select
+            id="activitySelect"
+            value={activity}
+            onChange={(e) => setActivity(e.target.value)}
+            required
+          >
             <option value="">Pilih Kegiatan</option>
             {activities.map((act) => (
-              <option key={act} value={act}>{act}</option>
+              <option key={act} value={act}>
+                {act}
+              </option>
             ))}
           </select>
         </div>
       </div>
-
       {bpdas && year && activity && (
-        <form onSubmit={handleSubmit} className="upload-form">
+        <div className="upload-form">
           {error && <pre className="error">{error}</pre>}
           {success && <p className="success">{success}</p>}
           {isUploading && <p className="uploading">Sedang mengunggah shapefile...</p>}
-
-          <label className="file-input-label">
-            Pilih File ZIP
-            <input
-              type="file"
-              id="shapefileInput"
-              accept=".zip"
-              onChange={handleFileChange}
-              disabled={isUploading}
-              required
-            />
-          </label>
-
-          <div className="file-name-box">
-            {file ? file.name : 'Tidak ada file dipilih'}
-          </div>
-
-          <button type="submit" disabled={isUploading}>
-            {isUploading ? 'Mengunggah...' : 'Unggah'}
-          </button>
-        </form>
+          <form onSubmit={handleSubmit}>
+            <div className="input-group">
+              <label htmlFor="shapefileInput" className="file-input-label">
+                Pilih File .zip {activity}
+              </label>
+              <input
+                type="file"
+                id="shapefileInput"
+                name="shapefile"
+                onChange={handleFileChange}
+                accept=".zip"
+                required
+                disabled={isUploading}
+                className="file-input"
+              />
+              <div className="file-name-box">
+                {file ? file.name : 'Tidak ada file dipilih'}
+              </div>
+              <button type="submit" disabled={isUploading} className="upload-button">
+                {isUploading ? 'Mengunggah...' : 'Unggah'}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
     </div>
   );
